@@ -1,0 +1,23 @@
+# Implementation Tasks
+
+- [x] Data Layer
+    - [x] [NEW] `ChannelEntity.kt`
+    - [x] [MODIFY] `VideoEntity.kt`
+    - [x] [NEW] `ChannelDao.kt`
+    - [x] [MODIFY] `VideoDao.kt`
+    - [x] [MODIFY] `AppDatabase.kt`
+    - [x] [MODIFY] `DatabaseModule.kt` (Wired new DAO)
+- [x] Remote Layer
+    - [x] [MODIFY] `YouTubeApiService.kt`
+- [x] Business Logic
+    - [x] [NEW] `YouTubeRepository.kt`
+- [x] UI Layer (Compose)
+    - [x] [NEW] `HomeViewModel.kt`
+    - [x] [NEW] `ChannelsViewModel.kt`
+    - [x] [NEW] `MainScreen.kt`
+    - [x] [NEW] `VideoListScreen.kt`
+    - [x] [NEW] `ChannelManagementScreen.kt`
+- [x] Chromecast Integration
+    - [x] [NEW] `CastManager.kt`
+- [x] Integration & Wiring
+    - [x] [MODIFY] `MainActivity.kt`
