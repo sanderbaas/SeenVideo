@@ -1,0 +1,145 @@
+package nl.baasmail.seenvideo.ui.channels
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import nl.baasmail.seenvideo.data.local.ChannelEntity
+import kotlinx.coroutines.flow.collectLatest
+
+@Composable
+fun ChannelManagementScreen(
+    viewModel: ChannelsViewModel = hiltViewModel()
+) {
+    val channels by viewModel.channels.collectAsState()
+    var showAddDialog by remember { mutableStateOf(false) }
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(Unit) {
+        viewModel.errorEvents.collectLatest { message ->
+            snackbarHostState.showSnackbar(message)
+        }
+    }
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) }
+    ) { innerPadding ->
+        Column(modifier = Modifier.fillMaxSize().padding(innerPadding).padding(16.dp)) {
+            Button(
+                onClick = { showAddDialog = true },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Icon(Icons.Default.Add, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Kanaal Toevoegen")
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            LazyColumn {
+                items(channels) { channel ->
+                    ChannelItem(
+                        channel = channel,
+                        onUpdate = { viewModel.updateSettings(it) },
+                        onDelete = { viewModel.removeChannel(it) }
+                    )
+                }
+            }
+        }
+    }
+
+    if (showAddDialog) {
+        AddChannelDialog(
+            onDismiss = { showAddDialog = false },
+            onAdd = { handle ->
+                viewModel.addChannel(handle)
+                showAddDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+fun ChannelItem(
+    channel: ChannelEntity,
+    onUpdate: (ChannelEntity) -> Unit,
+    onDelete: (ChannelEntity) -> Unit
+) {
+    var keywordsState by remember(channel.id) { mutableStateOf(channel.safeKeywords) }
+    
+    // Sync local state if external data changes (e.g. from sync)
+    // but only if we are not currently typing (to avoid focus/cursor issues)
+    // Actually, for simplicity in this case, we just use the local state for typing
+    // and push updates upwards.
+
+    Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = channel.name, style = MaterialTheme.typography.titleMedium)
+                    if (channel.handle.isNotEmpty()) {
+                        Text(text = channel.handle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                    }
+                }
+                IconButton(onClick = { onDelete(channel) }) {
+                    Icon(Icons.Default.Delete, contentDescription = "Verwijderen")
+                }
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(checked = channel.showOnHome, onCheckedChange = { onUpdate(channel.copy(showOnHome = it)) })
+                Text("Toon op Home", style = MaterialTheme.typography.bodyMedium)
+                Spacer(Modifier.width(16.dp))
+                Checkbox(checked = channel.showShorts, onCheckedChange = { onUpdate(channel.copy(showShorts = it)) })
+                Text("Toon Shorts", style = MaterialTheme.typography.bodyMedium)
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(checked = !channel.showThumbnails, onCheckedChange = { onUpdate(channel.copy(showThumbnails = !it)) })
+                Text("Blur thumbnails", style = MaterialTheme.typography.bodyMedium)
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Checkbox(checked = channel.blurTitles, onCheckedChange = { onUpdate(channel.copy(blurTitles = it)) })
+                Text("Blur titels", style = MaterialTheme.typography.bodyMedium)
+            }
+            TextField(
+                value = keywordsState,
+                onValueChange = { 
+                    keywordsState = it
+                    onUpdate(channel.copy(safeKeywords = it))
+                },
+                label = { Text("Veilige keywords (komma gescheiden)") },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+    }
+}
+
+@Composable
+fun AddChannelDialog(onDismiss: () -> Unit, onAdd: (String) -> Unit) {
+    var handle by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Kanaal toevoegen") },
+        text = {
+            TextField(
+                value = handle, 
+                onValueChange = { handle = it }, 
+                label = { Text("YouTube Handle (bijv. @kanaalnaam)") },
+                placeholder = { Text("@google") }
+            )
+        },
+        confirmButton = {
+            Button(onClick = { onAdd(handle) }) { Text("Toevoegen") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Annuleren") }
+        }
+    )
+}
