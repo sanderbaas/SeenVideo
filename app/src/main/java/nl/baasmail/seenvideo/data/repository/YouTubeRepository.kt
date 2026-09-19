@@ -12,6 +12,7 @@ import kotlinx.coroutines.launch
 import nl.baasmail.seenvideo.BuildConfig
 import nl.baasmail.seenvideo.data.local.ChannelDao
 import nl.baasmail.seenvideo.data.local.ChannelEntity
+import nl.baasmail.seenvideo.data.local.ChannelGroupEntity
 import nl.baasmail.seenvideo.data.local.VideoDao
 import nl.baasmail.seenvideo.data.local.VideoEntity
 import nl.baasmail.seenvideo.data.remote.*
@@ -49,10 +50,24 @@ class YouTubeRepository @Inject constructor(
     }
 
     val allChannels: Flow<List<ChannelEntity>> = channelDao.getAllChannels()
+    val allGroups: Flow<List<ChannelGroupEntity>> = channelDao.getAllGroups()
     val allVideos: Flow<List<VideoEntity>> = videoDao.getAllVideos()
 
     // Store nextPageToken per channel for infinite scrolling
     private val nextPageTokens = ConcurrentHashMap<String, String>()
+
+    suspend fun addGroup(name: String) {
+        channelDao.insertGroup(ChannelGroupEntity(name = name))
+    }
+
+    suspend fun deleteGroup(group: ChannelGroupEntity) {
+        // Reset groupId for channels in this group
+        val channels = allChannels.first()
+        channels.filter { it.groupId == group.id }.forEach { channel ->
+            channelDao.updateChannel(channel.copy(groupId = null))
+        }
+        channelDao.deleteGroup(group)
+    }
 
     suspend fun addChannelByHandle(handle: String): Boolean {
         Log.d("YouTubeRepository", "Adding channel: $handle")

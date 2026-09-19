@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import nl.baasmail.seenvideo.data.local.ChannelEntity
+import nl.baasmail.seenvideo.data.local.ChannelGroupEntity
 import nl.baasmail.seenvideo.data.local.VideoEntity
 import nl.baasmail.seenvideo.data.repository.YouTubeRepository
 import nl.baasmail.seenvideo.ui.YouTubeLauncher
@@ -88,29 +89,59 @@ class HomeViewModel @Inject constructor(
     private val _isWatchLaterSelected = MutableStateFlow(false)
     val isWatchLaterSelected = _isWatchLaterSelected.asStateFlow()
 
+    private val _selectedGroupId = MutableStateFlow<Long?>(-1L)
+    val selectedGroupId = _selectedGroupId.asStateFlow()
+
     val uiState: StateFlow<HomeUiState> = combine(
         repository.allVideos,
         repository.allChannels,
+        repository.allGroups,
         _selectedChannelId,
+        _selectedGroupId,
         _isWatchLaterSelected
-    ) { videos, channels, selectedId, watchLaterOnly ->
+    ) { flows ->
+        val videos = flows[0] as List<VideoEntity>
+        val channels = flows[1] as List<ChannelEntity>
+        val groups = flows[2] as List<ChannelGroupEntity>
+        val selectedId = flows[3] as String?
+        val selectedGroupId = flows[4] as Long?
+        val watchLaterOnly = flows[5] as Boolean
+
+        // If no groups exist, we don't want any group filtering
+        val effectiveGroupId = if (groups.isEmpty()) -1L else selectedGroupId
+
         val filteredVideos = videos.filter { video ->
             val channel = channels.find { it.id == video.channelId }
+            
+            // 1. Group Filter
+            val isInGroup = when (effectiveGroupId) {
+                null, -1L -> true
+                else -> channel?.groupId == effectiveGroupId
+            }
+            if (!isInGroup) return@filter false
+
+            // 2. Category Filter
             if (watchLaterOnly) {
                 video.watchLaterItemId != null
+            } else if (selectedId != null) {
+                video.channelId == selectedId
             } else {
-                if (selectedId == null) {
-                    channel?.showOnHome ?: false
-                } else {
-                    video.channelId == selectedId
-                }
+                // "Home" mode
+                channel?.showOnHome ?: false
             }
+        }
+
+        val filteredChannels = when (effectiveGroupId) {
+            null, -1L -> channels
+            else -> channels.filter { it.groupId == effectiveGroupId }
         }
 
         HomeUiState(
             videos = filteredVideos,
-            channels = channels,
+            channels = filteredChannels,
+            groups = groups,
             selectedChannelId = selectedId,
+            selectedGroupId = selectedGroupId,
             isWatchLaterSelected = watchLaterOnly
         )
     }.stateIn(
@@ -129,7 +160,16 @@ class HomeViewModel @Inject constructor(
                 
                 val currentId = _selectedChannelId.value
                 if (currentId == null) {
-                    repository.refreshAll()
+                    val currentGroupId = _selectedGroupId.value
+                    if (currentGroupId == null) {
+                        repository.refreshAll()
+                    } else {
+                        // Refresh all channels in the current group
+                        val channels = uiState.value.channels.filter { it.groupId == currentGroupId }
+                        channels.forEach { channel ->
+                            repository.refreshVideosForChannel(channel.id)
+                        }
+                    }
                 } else {
                     repository.refreshVideosForChannel(currentId)
                 }
@@ -149,6 +189,12 @@ class HomeViewModel @Inject constructor(
                 _isLoadingMore.value = false
             }
         }
+    }
+
+    fun selectGroup(groupId: Long?) {
+        _selectedGroupId.value = groupId
+        _selectedChannelId.value = null // Reset selected channel when group changes
+        refresh()
     }
 
     fun selectChannel(channelId: String?) {
@@ -187,6 +233,8 @@ class HomeViewModel @Inject constructor(
 data class HomeUiState(
     val videos: List<VideoEntity> = emptyList(),
     val channels: List<ChannelEntity> = emptyList(),
+    val groups: List<ChannelGroupEntity> = emptyList(),
     val selectedChannelId: String? = null,
+    val selectedGroupId: Long? = null,
     val isWatchLaterSelected: Boolean = false
 )

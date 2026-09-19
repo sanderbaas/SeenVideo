@@ -13,5 +13,6 @@ data class ChannelEntity(
     val showShorts: Boolean = false,
     val showOnHome: Boolean = true,
     val blurTitles: Boolean = false,
-    val safeKeywords: String = "" // Comma-separated
+    val safeKeywords: String = "", // Comma-separated
+    val groupId: Long? = null
 )

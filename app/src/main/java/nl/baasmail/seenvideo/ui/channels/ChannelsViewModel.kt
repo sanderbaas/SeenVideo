@@ -17,6 +17,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.FlowPreview
 import kotlin.time.Duration.Companion.milliseconds
 import nl.baasmail.seenvideo.data.local.ChannelEntity
+import nl.baasmail.seenvideo.data.local.ChannelGroupEntity
 import nl.baasmail.seenvideo.data.repository.ChannelSearchResult
 import nl.baasmail.seenvideo.data.repository.YouTubeRepository
 import javax.inject.Inject
@@ -27,6 +28,12 @@ class ChannelsViewModel @Inject constructor(
 ) : ViewModel() {
 
     val channels: StateFlow<List<ChannelEntity>> = repository.allChannels.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
+    val groups: StateFlow<List<ChannelGroupEntity>> = repository.allGroups.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
@@ -102,6 +109,18 @@ class ChannelsViewModel @Inject constructor(
     fun removeChannel(channel: ChannelEntity) {
         viewModelScope.launch {
             repository.deleteChannel(channel)
+        }
+    }
+
+    fun addGroup(name: String) {
+        viewModelScope.launch {
+            repository.addGroup(name)
+        }
+    }
+
+    fun removeGroup(group: ChannelGroupEntity) {
+        viewModelScope.launch {
+            repository.deleteGroup(group)
         }
     }
 }

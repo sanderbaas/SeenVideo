@@ -86,7 +86,43 @@ fun VideoListScreen(
             }
         }
 
-        // Selection Pills
+        // Group Selection Pills (only if groups exist)
+        if (uiState.groups.isNotEmpty()) {
+            LazyRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                item {
+                    FilterChip(
+                        selected = uiState.selectedGroupId == -1L,
+                        onClick = { viewModel.selectGroup(-1L) },
+                        label = { Text("Alles", style = MaterialTheme.typography.labelSmall) },
+                        modifier = Modifier.height(28.dp),
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    )
+                }
+                items(uiState.groups) { group ->
+                    FilterChip(
+                        selected = uiState.selectedGroupId == group.id,
+                        onClick = { viewModel.selectGroup(group.id) },
+                        label = { Text(group.name, style = MaterialTheme.typography.labelSmall) },
+                        modifier = Modifier.height(28.dp),
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                            selectedLabelColor = MaterialTheme.colorScheme.onSecondaryContainer
+                        )
+                    )
+                }
+            }
+        }
+
+        // Channel/Special Selection Pills
         LazyRow(
             modifier = Modifier
                 .fillMaxWidth()
@@ -101,6 +137,7 @@ fun VideoListScreen(
                     label = { Text("Home") }
                 )
             }
+
             item {
                 FilterChip(
                     selected = uiState.isWatchLaterSelected,
@@ -108,6 +145,7 @@ fun VideoListScreen(
                     label = { Text("Kijk later") }
                 )
             }
+            
             items(uiState.channels) { channel ->
                 FilterChip(
                     selected = uiState.selectedChannelId == channel.id,

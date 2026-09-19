@@ -21,4 +21,16 @@ interface ChannelDao {
 
     @Delete
     suspend fun deleteChannel(channel: ChannelEntity)
+
+    @Query("SELECT * FROM channel_groups")
+    fun getAllGroups(): Flow<List<ChannelGroupEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertGroup(group: ChannelGroupEntity)
+
+    @Update
+    suspend fun updateGroup(group: ChannelGroupEntity)
+
+    @Delete
+    suspend fun deleteGroup(group: ChannelGroupEntity)
 }
