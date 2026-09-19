@@ -8,14 +8,11 @@ import retrofit2.http.Query
 
 interface YouTubeApiService {
     @GET("youtube/v3/search")
-    suspend fun searchVideos(
+    suspend fun search(
         @Query("part") part: String = "snippet",
-        @Query("channelId") channelId: String? = null,
         @Query("q") query: String? = null,
         @Query("type") type: String = "video",
-        @Query("order") order: String = "date",
-        @Query("maxResults") maxResults: Int = 50,
-        @Query("videoDuration") videoDuration: String? = null,
+        @Query("maxResults") maxResults: Int = 10,
         @Query("pageToken") pageToken: String? = null,
         @Query("key") apiKey: String? = null
     ): YouTubeResponse
@@ -137,7 +134,8 @@ data class YouTubeRelatedPlaylists(
 )
 
 data class YouTubeChannelSnippet(
-    val title: String
+    val title: String,
+    val customUrl: String? = null
 )
 
 data class YouTubeResponse(
@@ -151,7 +149,9 @@ data class YouTubeItem(
 )
 
 data class YouTubeId(
-    val videoId: String
+    val kind: String,
+    val videoId: String? = null,
+    val channelId: String? = null
 )
 
 data class YouTubeSnippet(

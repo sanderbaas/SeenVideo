@@ -14,6 +14,12 @@ android {
     compileSdk = 35
     buildToolsVersion = "35.0.0"
 
+    val localProperties = Properties()
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        localProperties.load(localPropertiesFile.inputStream())
+    }
+
     defaultConfig {
         applicationId = "nl.baasmail.seenvideo"
         minSdk = 26
@@ -23,18 +29,21 @@ android {
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
-        val localProperties = Properties()
-        val localPropertiesFile = rootProject.file("local.properties")
-        if (localPropertiesFile.exists()) {
-            localProperties.load(localPropertiesFile.inputStream())
-        }
         buildConfigField("String", "YOUTUBE_API_KEY", "\"${localProperties.getProperty("YOUTUBE_API_KEY") ?: ""}\"")
-        buildConfigField("String", "GOOGLE_CLIENT_ID", "\"${localProperties.getProperty("GOOGLE_CLIENT_ID") ?: ""}\"")
     }
 
     buildTypes {
+        getByName("debug") {
+            applicationIdSuffix = ".debug"
+            manifestPlaceholders["appLabel"] = "SeenVideo (Debug)"
+            val clientId = localProperties.getProperty("GOOGLE_CLIENT_ID_DEBUG") ?: localProperties.getProperty("GOOGLE_CLIENT_ID")
+            buildConfigField("String", "GOOGLE_CLIENT_ID", "\"${clientId ?: ""}\"")
+        }
         release {
             isMinifyEnabled = false
+            manifestPlaceholders["appLabel"] = "SeenVideo"
+            val clientId = localProperties.getProperty("GOOGLE_CLIENT_ID")
+            buildConfigField("String", "GOOGLE_CLIENT_ID", "\"${clientId ?: ""}\"")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

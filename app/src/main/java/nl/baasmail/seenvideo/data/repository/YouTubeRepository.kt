@@ -23,6 +23,13 @@ import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
+data class ChannelSearchResult(
+    val id: String,
+    val title: String,
+    val thumbnailUrl: String,
+    val handle: String = ""
+)
+
 @Singleton
 class YouTubeRepository @Inject constructor(
     private val apiService: YouTubeApiService,
@@ -62,7 +69,7 @@ class YouTubeRepository @Inject constructor(
             ChannelEntity(
                 id = channel.id,
                 name = Html.fromHtml(channel.snippet.title, Html.FROM_HTML_MODE_LEGACY).toString(),
-                handle = handle,
+                handle = channel.snippet.customUrl ?: handle,
                 uploadsPlaylistId = channel.contentDetails?.relatedPlaylists?.uploads ?: ""
             )
         )
@@ -251,6 +258,22 @@ class YouTubeRepository @Inject constructor(
         }
 
         val channels = allChannels.first()
+        
+        // Update missing handles
+        val missingHandles = channels.filter { it.handle.isEmpty() }
+        if (missingHandles.isNotEmpty()) {
+            missingHandles.forEach { channel ->
+                try {
+                    val response = apiService.getChannelDetails(id = channel.id, apiKey = apiKey)
+                    response.items?.firstOrNull()?.snippet?.customUrl?.let { handle ->
+                        channelDao.updateChannel(channel.copy(handle = handle))
+                    }
+                } catch (e: Exception) {
+                    Log.e("YouTubeRepository", "Failed to update handle for ${channel.name}", e)
+                }
+            }
+        }
+
         coroutineScope {
             channels.map { channel ->
                 async {
@@ -458,5 +481,56 @@ class YouTubeRepository @Inject constructor(
         channelDao.deleteChannel(channel)
         videoDao.deleteVideosByChannel(channel.id)
         nextPageTokens.remove(channel.id)
+    }
+
+    suspend fun searchChannels(query: String): List<ChannelSearchResult> {
+        if (query.length < 2) return emptyList()
+        
+        return try {
+            val response = apiService.search(
+                query = query,
+                type = "channel",
+                maxResults = 5,
+                apiKey = apiKey
+            )
+            
+            response.items?.mapNotNull { item ->
+                val channelId = item.id.channelId ?: return@mapNotNull null
+                ChannelSearchResult(
+                    id = channelId,
+                    title = Html.fromHtml(item.snippet.title, Html.FROM_HTML_MODE_LEGACY).toString(),
+                    thumbnailUrl = item.snippet.thumbnails.default.url,
+                    handle = "" // Search results don't always contain the handle easily
+                )
+            } ?: emptyList()
+        } catch (e: Exception) {
+            Log.e("YouTubeRepository", "Channel search failed", e)
+            emptyList()
+        }
+    }
+
+    suspend fun addChannelById(channelId: String, name: String): Boolean {
+        Log.d("YouTubeRepository", "Adding channel by ID: $channelId ($name)")
+        
+        // Fetch details to get the uploads playlist ID
+        val response = try {
+            apiService.getChannelDetails(id = channelId, apiKey = apiKey)
+        } catch (e: Exception) {
+            Log.e("YouTubeRepository", "API Call failed for $channelId", e)
+            return false
+        }
+        
+        val channel = response.items?.firstOrNull() ?: return false
+        
+        channelDao.insertChannel(
+            ChannelEntity(
+                id = channel.id,
+                name = name,
+                handle = channel.snippet.customUrl ?: "",
+                uploadsPlaylistId = channel.contentDetails?.relatedPlaylists?.uploads ?: ""
+            )
+        )
+        refreshVideosForChannel(channel.id)
+        return true
     }
 }
