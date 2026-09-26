@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import nl.baasmail.seenvideo.data.local.ChannelEntity
@@ -49,8 +50,8 @@ class HomeViewModel @Inject constructor(
             if (result == "Success") {
                 authManager.getYouTubeToken(context)
                 repository.syncLocalWatchedToYouTube()
-                refresh() // Haal vinkjes en videos op
             }
+            refresh() // Haal vinkjes en videos op
         }
     }
 
@@ -120,7 +121,12 @@ class HomeViewModel @Inject constructor(
             }
             if (!isInGroup) return@filter false
 
-            // 2. Category Filter
+            // 2. Shorts Filter
+            if (channel?.showShorts == false && video.isShortVideo()) {
+                return@filter false
+            }
+
+            // 3. Category Filter
             if (watchLaterOnly) {
                 video.watchLaterItemId != null
             } else if (selectedId != null) {
@@ -161,12 +167,13 @@ class HomeViewModel @Inject constructor(
                 val currentId = _selectedChannelId.value
                 if (currentId == null) {
                     val currentGroupId = _selectedGroupId.value
-                    if (currentGroupId == null) {
+                    if (currentGroupId == null || currentGroupId == -1L) {
                         repository.refreshAll()
                     } else {
                         // Refresh all channels in the current group
-                        val channels = uiState.value.channels.filter { it.groupId == currentGroupId }
-                        channels.forEach { channel ->
+                        val allChannels = repository.allChannels.first()
+                        val groupChannels = allChannels.filter { it.groupId == currentGroupId }
+                        groupChannels.forEach { channel ->
                             repository.refreshVideosForChannel(channel.id)
                         }
                     }

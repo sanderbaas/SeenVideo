@@ -18,14 +18,24 @@ import kotlinx.coroutines.FlowPreview
 import kotlin.time.Duration.Companion.milliseconds
 import nl.baasmail.seenvideo.data.local.ChannelEntity
 import nl.baasmail.seenvideo.data.local.ChannelGroupEntity
+import nl.baasmail.seenvideo.data.local.NotificationPreferences
 import nl.baasmail.seenvideo.data.repository.ChannelSearchResult
 import nl.baasmail.seenvideo.data.repository.YouTubeRepository
+import nl.baasmail.seenvideo.notification.NotificationScheduler
+import android.content.Context
+import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 
 @HiltViewModel
 class ChannelsViewModel @Inject constructor(
-    private val repository: YouTubeRepository
+    private val repository: YouTubeRepository,
+    private val notificationPreferences: NotificationPreferences,
+    @ApplicationContext private val context: Context
 ) : ViewModel() {
+
+    val notificationsEnabled: StateFlow<Boolean> = notificationPreferences.notificationsEnabled
+    val notificationHour: StateFlow<Int> = notificationPreferences.notificationHour
+    val notificationMinute: StateFlow<Int> = notificationPreferences.notificationMinute
 
     val channels: StateFlow<List<ChannelEntity>> = repository.allChannels.stateIn(
         scope = viewModelScope,
@@ -121,6 +131,26 @@ class ChannelsViewModel @Inject constructor(
     fun removeGroup(group: ChannelGroupEntity) {
         viewModelScope.launch {
             repository.deleteGroup(group)
+        }
+    }
+
+    fun setNotificationsEnabled(enabled: Boolean) {
+        notificationPreferences.setNotificationsEnabled(enabled)
+        if (enabled) {
+            NotificationScheduler.scheduleDailyWorker(
+                context,
+                notificationPreferences.getNotificationHour(),
+                notificationPreferences.getNotificationMinute()
+            )
+        } else {
+            NotificationScheduler.cancelDailyWorker(context)
+        }
+    }
+
+    fun setNotificationTime(hour: Int, minute: Int) {
+        notificationPreferences.setNotificationTime(hour, minute)
+        if (notificationPreferences.getNotificationsEnabled()) {
+            NotificationScheduler.scheduleDailyWorker(context, hour, minute)
         }
     }
 }

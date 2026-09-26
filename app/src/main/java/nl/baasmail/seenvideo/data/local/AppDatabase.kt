@@ -5,7 +5,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [VideoEntity::class, ChannelEntity::class, ChannelGroupEntity::class], version = 10)
+@Database(entities = [VideoEntity::class, ChannelEntity::class, ChannelGroupEntity::class], version = 11)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun videoDao(): VideoDao
     abstract fun channelDao(): ChannelDao
@@ -18,6 +18,12 @@ abstract class AppDatabase : RoomDatabase() {
                 
                 // 2. Add the groupId column to the channels table
                 db.execSQL("ALTER TABLE `channels` ADD COLUMN `groupId` INTEGER DEFAULT NULL")
+            }
+        }
+
+        val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `channels` ADD COLUMN `notifyNewVideos` INTEGER NOT NULL DEFAULT 1")
             }
         }
     }

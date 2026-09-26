@@ -14,6 +14,7 @@ SeenVideo is an Android application designed for a focused YouTube experience. I
 <p align="center">
   <img src="screenshots/screenshot4.jpg" width="30%" />
   <img src="screenshots/screenshot5.jpg" width="30%" />
+  <img src="screenshots/screenshot6.jpg" width="30%" />
 </p>
 
 ## Features
@@ -21,6 +22,9 @@ SeenVideo is an Android application designed for a focused YouTube experience. I
 *   **Channel Management**: Follow specific YouTube channels by their handle (e.g., `@VPROTegenlicht`) or using the built-in search.
 *   **Channel Groups**: Categorize your channels into custom groups (e.g., "News", "Entertainment") to easily filter your video feed.
 *   **Focused Home Feed**: Only see videos from the channels you've explicitly added.
+*   **Daily Notifications**: 
+    *   Set a preferred daily notification time to receive a single, bundled summary of new videos.
+    *   Toggle notifications per channel to customize which channels appear in your daily update.
 *   **Playlist Sync**: 
     *   Synchronizes with a custom YouTube playlist ("SeenVideo Watched") to track your progress across devices.
     *   Directly manage and view your "Watch Later" playlist.

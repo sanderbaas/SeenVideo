@@ -13,6 +13,9 @@ interface ChannelDao {
     @Query("SELECT * FROM channels")
     fun getAllChannels(): Flow<List<ChannelEntity>>
 
+    @Query("SELECT * FROM channels WHERE id = :channelId")
+    suspend fun getChannelById(channelId: String): ChannelEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertChannel(channel: ChannelEntity)
 

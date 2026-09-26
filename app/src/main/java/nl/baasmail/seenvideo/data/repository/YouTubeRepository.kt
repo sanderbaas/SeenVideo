@@ -71,21 +71,35 @@ class YouTubeRepository @Inject constructor(
 
     suspend fun addChannelByHandle(handle: String): Boolean {
         Log.d("YouTubeRepository", "Adding channel: $handle")
-        val response = try {
-            apiService.getChannelDetails(handle = handle, apiKey = apiKey)
+        val formattedHandle = if (handle.startsWith("@")) handle else "@$handle"
+        var response = try {
+            apiService.getChannelDetails(handle = formattedHandle, apiKey = apiKey)
         } catch (e: Exception) {
-            Log.e("YouTubeRepository", "API Call failed for $handle", e)
+            null
+        }
+        
+        if (response?.items.isNullOrEmpty() && formattedHandle != handle) {
+            response = try {
+                apiService.getChannelDetails(handle = handle, apiKey = apiKey)
+            } catch (e: Exception) {
+                null
+            }
+        }
+        
+        val channel = response?.items?.firstOrNull() ?: run {
+            Log.e("YouTubeRepository", "API Call failed or channel not found for $handle")
             return false
         }
         
-        val channel = response.items?.firstOrNull() ?: return false
+        val uploadsId = channel.contentDetails?.relatedPlaylists?.uploads?.takeIf { it.startsWith("UU") }
+            ?: ("UU" + channel.id.removePrefix("UC"))
         
         channelDao.insertChannel(
             ChannelEntity(
                 id = channel.id,
                 name = Html.fromHtml(channel.snippet.title, Html.FROM_HTML_MODE_LEGACY).toString(),
                 handle = channel.snippet.customUrl ?: handle,
-                uploadsPlaylistId = channel.contentDetails?.relatedPlaylists?.uploads ?: ""
+                uploadsPlaylistId = uploadsId
             )
         )
         refreshVideosForChannel(channel.id)
@@ -125,17 +139,18 @@ class YouTubeRepository @Inject constructor(
 
     private suspend fun loadVideos(channelId: String, isRefresh: Boolean) {
         Log.d("YouTubeRepository", "loadVideos started for channelId: $channelId, isRefresh: $isRefresh")
-        val channels = allChannels.first()
-        val channelSettings = channels.find { it.id == channelId } ?: run {
+        val channelSettings = channelDao.getChannelById(channelId) ?: run {
             Log.e("YouTubeRepository", "Channel settings not found for $channelId")
             return
         }
         
         // Ensure we have a valid playlist ID for uploads
-        val playlistId = if (channelSettings.uploadsPlaylistId.isNotEmpty()) {
+        val playlistId = if (channelSettings.uploadsPlaylistId.startsWith("UU")) {
             channelSettings.uploadsPlaylistId
         } else {
-            "UU" + channelId.removePrefix("UC")
+            val correctId = "UU" + channelId.removePrefix("UC")
+            channelDao.updateChannel(channelSettings.copy(uploadsPlaylistId = correctId))
+            correctId
         }
         
         Log.d("YouTubeRepository", "Using playlistId: $playlistId for channel: ${channelSettings.name}")
@@ -536,13 +551,15 @@ class YouTubeRepository @Inject constructor(
         }
         
         val channel = response.items?.firstOrNull() ?: return false
+        val uploadsId = channel.contentDetails?.relatedPlaylists?.uploads?.takeIf { it.startsWith("UU") }
+            ?: ("UU" + channel.id.removePrefix("UC"))
         
         channelDao.insertChannel(
             ChannelEntity(
                 id = channel.id,
                 name = name,
                 handle = channel.snippet.customUrl ?: "",
-                uploadsPlaylistId = channel.contentDetails?.relatedPlaylists?.uploads ?: ""
+                uploadsPlaylistId = uploadsId
             )
         )
         refreshVideosForChannel(channel.id)
