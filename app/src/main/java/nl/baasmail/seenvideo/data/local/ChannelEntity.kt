@@ -14,5 +14,6 @@ data class ChannelEntity(
     val showOnHome: Boolean = true,
     val blurTitles: Boolean = false,
     val safeKeywords: String = "", // Comma-separated
-    val groupId: Long? = null
+    val groupId: Long? = null,
+    val notifyNewVideos: Boolean = true
 )

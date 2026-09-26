@@ -23,7 +23,7 @@ object DatabaseModule {
             AppDatabase::class.java,
             "seen_video_db"
         )
-        .addMigrations(AppDatabase.MIGRATION_9_10)
+        .addMigrations(AppDatabase.MIGRATION_9_10, AppDatabase.MIGRATION_10_11)
         .fallbackToDestructiveMigration()
         .build()
     }
