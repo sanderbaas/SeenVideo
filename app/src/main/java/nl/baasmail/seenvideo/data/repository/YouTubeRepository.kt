@@ -417,7 +417,45 @@ class YouTubeRepository @Inject constructor(
         }
     }
 
+    suspend fun ensureVideoExists(videoId: String): VideoEntity {
+        val existing = videoDao.getVideoById(videoId)
+        if (existing != null) return existing
+
+        try {
+            val response = apiService.getVideoDetails(ids = videoId, apiKey = apiKey)
+            val item = response.items.firstOrNull()
+            val snippet = item?.snippet
+            if (item != null && snippet != null) {
+                val entity = VideoEntity(
+                    id = item.id,
+                    title = Html.fromHtml(snippet.title, Html.FROM_HTML_MODE_LEGACY).toString(),
+                    thumbnailUrl = snippet.thumbnails.high?.url ?: snippet.thumbnails.medium?.url ?: snippet.thumbnails.default.url,
+                    channelId = snippet.channelId ?: "unknown",
+                    channelName = snippet.channelTitle ?: "YouTube",
+                    duration = formatDuration(item.contentDetails.duration),
+                    publishedAt = try { Instant.parse(snippet.publishedAt).toEpochMilli() } catch (e: Exception) { System.currentTimeMillis() }
+                )
+                videoDao.insertVideos(listOf(entity))
+                return entity
+            }
+        } catch (e: Exception) {
+            Log.e("YouTubeRepository", "Failed to fetch video details for $videoId", e)
+        }
+
+        val fallback = VideoEntity(
+            id = videoId,
+            title = "Gedeelde Video ($videoId)",
+            thumbnailUrl = "https://img.youtube.com/vi/$videoId/hqdefault.jpg",
+            channelId = "shared",
+            channelName = "YouTube",
+            publishedAt = System.currentTimeMillis()
+        )
+        videoDao.insertVideos(listOf(fallback))
+        return fallback
+    }
+
     suspend fun markAsWatched(videoId: String, isWatched: Boolean) {
+        ensureVideoExists(videoId)
         videoDao.markAsWatched(videoId, isWatched)
         if (authManager.accessToken.value != null) {
             syncWatchedStatusToYouTube(videoId, isWatched)
@@ -445,6 +483,9 @@ class YouTubeRepository @Inject constructor(
     }
 
     suspend fun toggleWatchLater(videoId: String, addToWatchLater: Boolean) {
+        ensureVideoExists(videoId)
+        val watchLaterItemId = if (addToWatchLater) "watch_later_$videoId" else null
+        videoDao.updateWatchLaterItemId(videoId, watchLaterItemId)
         if (authManager.accessToken.value != null) {
             syncWatchLaterStatusToYouTube(videoId, addToWatchLater)
         }

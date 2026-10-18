@@ -16,6 +16,9 @@ interface VideoDao {
     @Query("SELECT * FROM videos WHERE channelId = :channelId ORDER BY publishedAt DESC")
     fun getVideosByChannel(channelId: String): Flow<List<VideoEntity>>
 
+    @Query("SELECT * FROM videos WHERE id = :id LIMIT 1")
+    suspend fun getVideoById(id: String): VideoEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertVideos(videos: List<VideoEntity>)
 

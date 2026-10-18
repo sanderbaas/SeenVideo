@@ -36,6 +36,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import nl.baasmail.seenvideo.data.local.VideoEntity
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VideoListScreen(
@@ -46,8 +49,34 @@ fun VideoListScreen(
     val isLoadingMore by viewModel.isLoadingMore.collectAsState()
     val userEmail by viewModel.userEmail.collectAsState()
     val accessToken by viewModel.accessToken.collectAsState()
+    val backupMessage by viewModel.backupMessage.collectAsState()
     val listState = rememberLazyListState()
     val context = LocalContext.current
+
+    val sharedVideoId by viewModel.sharedVideoId.collectAsState()
+
+    sharedVideoId?.let { videoId ->
+        ShareVideoDialog(
+            videoId = videoId,
+            onAddToWatchLater = { id -> viewModel.toggleWatchLater(id, true) },
+            onMarkAsWatched = { id -> viewModel.markAsWatched(id, true) },
+            onDismiss = { viewModel.clearSharedVideo() },
+            t = viewModel::t
+        )
+    }
+
+    backupMessage?.let { msg ->
+        AlertDialog(
+            onDismissRequest = { viewModel.clearBackupMessage() },
+            confirmButton = {
+                TextButton(onClick = { viewModel.clearBackupMessage() }) {
+                    Text("OK")
+                }
+            },
+            title = { Text("Backup Status") },
+            text = { Text(msg) }
+        )
+    }
 
     // Fetch token if logged in but no token yet
     LaunchedEffect(userEmail, accessToken) {
@@ -77,14 +106,6 @@ fun VideoListScreen(
     }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        if (userEmail == null) {
-            Button(
-                onClick = { viewModel.signIn(context) },
-                modifier = Modifier.fillMaxWidth().padding(16.dp)
-            ) {
-                Text("Inloggen met Google voor Playlist Sync")
-            }
-        }
 
         // Group Selection Pills (only if groups exist)
         if (uiState.groups.isNotEmpty()) {
@@ -99,7 +120,7 @@ fun VideoListScreen(
                     FilterChip(
                         selected = uiState.selectedGroupId == -1L,
                         onClick = { viewModel.selectGroup(-1L) },
-                        label = { Text("Alles", style = MaterialTheme.typography.labelSmall) },
+                        label = { Text(viewModel.t("Alles", "All"), style = MaterialTheme.typography.labelSmall) },
                         modifier = Modifier.height(28.dp),
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = MaterialTheme.colorScheme.secondaryContainer,
@@ -134,7 +155,7 @@ fun VideoListScreen(
                 FilterChip(
                     selected = uiState.selectedChannelId == null && !uiState.isWatchLaterSelected,
                     onClick = { viewModel.selectChannel(null) },
-                    label = { Text("Home") }
+                    label = { Text(viewModel.t("Home", "Home")) }
                 )
             }
 
@@ -142,7 +163,7 @@ fun VideoListScreen(
                 FilterChip(
                     selected = uiState.isWatchLaterSelected,
                     onClick = { viewModel.selectWatchLater(!uiState.isWatchLaterSelected) },
-                    label = { Text("Kijk later") }
+                    label = { Text(viewModel.t("Kijk later", "Watch Later")) }
                 )
             }
             
@@ -166,10 +187,10 @@ fun VideoListScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     val message = when {
-                        uiState.isWatchLaterSelected -> "Geen video's in Kijk later"
-                        uiState.selectedChannelId != null -> "Geen video's gevonden voor dit kanaal"
-                        uiState.channels.isEmpty() -> "Voeg een kanaal toe bij 'Kanalen'"
-                        else -> "Geen video's om te tonen"
+                        uiState.isWatchLaterSelected -> viewModel.t("Geen video's in Kijk later", "No videos in Watch Later")
+                        uiState.selectedChannelId != null -> viewModel.t("Geen video's gevonden voor dit kanaal", "No videos found for this channel")
+                        uiState.channels.isEmpty() -> viewModel.t("Voeg een kanaal toe bij 'Kanalen'", "Add a channel in 'Channels'")
+                        else -> viewModel.t("Geen video's om te tonen", "No videos to display")
                     }
                     Text(
                         text = message,
@@ -193,6 +214,7 @@ fun VideoListScreen(
                         blurTitle = channel?.blurTitles ?: false,
                         safeKeywords = channel?.safeKeywords ?: "",
                         relativeTime = viewModel.getRelativeTime(video.publishedAt),
+                        watchedText = viewModel.t("BEKEKEN", "WATCHED"),
                         onWatchedClick = { viewModel.markAsWatched(video.id, !video.isWatched) },
                         onWatchLaterClick = { viewModel.toggleWatchLater(video.id, video.watchLaterItemId == null) },
                         onPlayClick = { viewModel.playVideo(video) }
@@ -223,6 +245,7 @@ fun VideoItem(
     blurTitle: Boolean,
     safeKeywords: String,
     relativeTime: String,
+    watchedText: String,
     onWatchedClick: () -> Unit,
     onWatchLaterClick: () -> Unit,
     onPlayClick: () -> Unit
@@ -330,7 +353,7 @@ fun VideoItem(
                             shape = MaterialTheme.shapes.small
                         ) {
                             Text(
-                                text = "BEKEKEN",
+                                text = watchedText,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                 color = Color.White,
                                 style = MaterialTheme.typography.labelMedium,

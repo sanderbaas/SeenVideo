@@ -76,11 +76,11 @@ fun ChannelManagementScreen(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Dagelijkse notificatie",
+                                text = viewModel.t("Dagelijkse notificatie", "Daily notification"),
                                 style = MaterialTheme.typography.titleMedium
                             )
                             Text(
-                                text = "Ontvang 1 overzicht van nieuwe video's",
+                                text = viewModel.t("Ontvang 1 overzicht van nieuwe video's", "Receive 1 summary of new videos"),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.outline
                             )
@@ -107,7 +107,7 @@ fun ChannelManagementScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Text("Tijdstip notificatie", style = MaterialTheme.typography.bodyMedium)
+                            Text(viewModel.t("Tijdstip notificatie", "Notification time"), style = MaterialTheme.typography.bodyMedium)
                             Text(
                                 text = String.format(Locale.getDefault(), "%02d:%02d", notificationHour, notificationMinute),
                                 style = MaterialTheme.typography.titleSmall,
@@ -125,7 +125,7 @@ fun ChannelManagementScreen(
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Kanaal")
+                    Text(viewModel.t("Kanaal", "Channel"))
                 }
                 
                 Button(
@@ -135,7 +135,7 @@ fun ChannelManagementScreen(
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Groep")
+                    Text(viewModel.t("Groep", "Group"))
                 }
             }
 
@@ -144,7 +144,7 @@ fun ChannelManagementScreen(
             LazyColumn {
                 if (groups.isNotEmpty()) {
                     item {
-                        Text("Kanaalgroepen", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                        Text(viewModel.t("Kanaalgroepen", "Channel Groups"), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                         Spacer(Modifier.height(8.dp))
                     }
                     items(groups) { group ->
@@ -155,7 +155,7 @@ fun ChannelManagementScreen(
                     }
                     item {
                         Spacer(Modifier.height(16.dp))
-                        Text("Kanalen", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                        Text(viewModel.t("Kanalen", "Channels"), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
                         Spacer(Modifier.height(8.dp))
                     }
                 }
@@ -164,6 +164,7 @@ fun ChannelManagementScreen(
                     ChannelItem(
                         channel = channel,
                         groups = groups,
+                        viewModel = viewModel,
                         onUpdate = { viewModel.updateSettings(it) },
                         onDelete = { viewModel.removeChannel(it) }
                     )
@@ -181,6 +182,7 @@ fun ChannelManagementScreen(
 
     if (showAddGroupDialog) {
         AddGroupDialog(
+            viewModel = viewModel,
             onDismiss = { showAddGroupDialog = false },
             onAdd = { viewModel.addGroup(it) }
         )
@@ -201,7 +203,7 @@ fun ChannelManagementScreen(
                 }) { Text("OK") }
             },
             dismissButton = {
-                TextButton(onClick = { showTimePicker = false }) { Text("Annuleren") }
+                TextButton(onClick = { showTimePicker = false }) { Text(viewModel.t("Annuleren", "Cancel")) }
             },
             text = {
                 TimePicker(state = timePickerState)
@@ -212,11 +214,17 @@ fun ChannelManagementScreen(
 
 @Composable
 fun GroupItem(group: ChannelGroupEntity, onDelete: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)) {
-        Row(modifier = Modifier.padding(8.dp, 4.dp), verticalAlignment = Alignment.CenterVertically) {
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp).fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Text(text = group.name, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyLarge)
             IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, contentDescription = "Verwijder groep", modifier = Modifier.size(20.dp))
+                Icon(Icons.Default.Delete, contentDescription = null)
             }
         }
     }
@@ -226,15 +234,28 @@ fun GroupItem(group: ChannelGroupEntity, onDelete: () -> Unit) {
 fun ChannelItem(
     channel: ChannelEntity,
     groups: List<ChannelGroupEntity>,
+    viewModel: ChannelsViewModel,
     onUpdate: (ChannelEntity) -> Unit,
     onDelete: (ChannelEntity) -> Unit
 ) {
-    var keywordsState by remember(channel.id) { mutableStateOf(channel.safeKeywords) }
     var expanded by remember { mutableStateOf(false) }
-
-    Card(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+    
+    Card(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Subscriptions,
+                    contentDescription = null,
+                    modifier = Modifier.size(40.dp).padding(4.dp),
+                    tint = MaterialTheme.colorScheme.primary
+                )
+                Spacer(Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(text = channel.name, style = MaterialTheme.typography.titleMedium)
                     if (channel.handle.isNotEmpty()) {
@@ -245,7 +266,7 @@ fun ChannelItem(
                     Icon(if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown, contentDescription = null)
                 }
                 IconButton(onClick = { onDelete(channel) }) {
-                    Icon(Icons.Default.Delete, contentDescription = "Verwijderen")
+                    Icon(Icons.Default.Delete, contentDescription = null)
                 }
             }
             
@@ -261,11 +282,11 @@ fun ChannelItem(
                         onClick = { showGroupMenu = true },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(text = "Groep: ${currentGroup?.name ?: "Geen"}")
+                        Text(text = "${viewModel.t("Groep", "Group")}: ${currentGroup?.name ?: viewModel.t("Geen", "None")}")
                     }
                     DropdownMenu(expanded = showGroupMenu, onDismissRequest = { showGroupMenu = false }) {
                         DropdownMenuItem(
-                            text = { Text("Geen groep") },
+                            text = { Text(viewModel.t("Geen groep", "No group")) },
                             onClick = { 
                                 onUpdate(channel.copy(groupId = null))
                                 showGroupMenu = false
@@ -285,30 +306,27 @@ fun ChannelItem(
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(checked = channel.showOnHome, onCheckedChange = { onUpdate(channel.copy(showOnHome = it)) })
-                    Text("Toon op Home", style = MaterialTheme.typography.bodyMedium)
+                    Text(viewModel.t("Toon op Home", "Show on Home"), style = MaterialTheme.typography.bodyMedium)
                     Spacer(Modifier.width(16.dp))
                     Checkbox(checked = channel.showShorts, onCheckedChange = { onUpdate(channel.copy(showShorts = it)) })
-                    Text("Toon Shorts", style = MaterialTheme.typography.bodyMedium)
+                    Text(viewModel.t("Toon Shorts", "Show Shorts"), style = MaterialTheme.typography.bodyMedium)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(checked = channel.notifyNewVideos, onCheckedChange = { onUpdate(channel.copy(notifyNewVideos = it)) })
-                    Text("Meldingen voor dit kanaal", style = MaterialTheme.typography.bodyMedium)
+                    Text(viewModel.t("Meldingen voor dit kanaal", "Notifications for this channel"), style = MaterialTheme.typography.bodyMedium)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(checked = !channel.showThumbnails, onCheckedChange = { onUpdate(channel.copy(showThumbnails = !it)) })
-                    Text("Blur thumbnails", style = MaterialTheme.typography.bodyMedium)
+                    Text(viewModel.t("Blur thumbnails", "Blur thumbnails"), style = MaterialTheme.typography.bodyMedium)
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(checked = channel.blurTitles, onCheckedChange = { onUpdate(channel.copy(blurTitles = it)) })
-                    Text("Blur titels", style = MaterialTheme.typography.bodyMedium)
+                    Text(viewModel.t("Blur titels", "Blur titles"), style = MaterialTheme.typography.bodyMedium)
                 }
                 TextField(
-                    value = keywordsState,
-                    onValueChange = { 
-                        keywordsState = it
-                        onUpdate(channel.copy(safeKeywords = it))
-                    },
-                    label = { Text("Veilige keywords (komma gescheiden)") },
+                    value = channel.safeKeywords,
+                    onValueChange = { onUpdate(channel.copy(safeKeywords = it)) },
+                    label = { Text(viewModel.t("Veilige keywords (komma gescheiden)", "Safe keywords (comma separated)")) },
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -327,14 +345,14 @@ fun AddChannelDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Kanaal toevoegen") },
+        title = { Text(viewModel.t("Kanaal toevoegen", "Add Channel")) },
         text = {
             Column(modifier = Modifier.fillMaxWidth()) {
                 OutlinedTextField(
                     value = searchQuery, 
                     onValueChange = { viewModel.onSearchQueryChange(it) }, 
-                    label = { Text("Zoek kanaal of voer handle in") },
-                    placeholder = { Text("@google of kanaalnaam") },
+                    label = { Text(viewModel.t("Zoek kanaal of voer handle in", "Search channel or enter handle")) },
+                    placeholder = { Text(viewModel.t("@google of kanaalnaam", "@google or channel name")) },
                     modifier = Modifier.fillMaxWidth(),
                     trailingIcon = {
                         if (isSearching) {
@@ -348,7 +366,7 @@ fun AddChannelDialog(
 
                 if (searchResults.isNotEmpty()) {
                     Spacer(Modifier.height(8.dp))
-                    Text("Suggesties:", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    Text(viewModel.t("Suggesties:", "Suggestions:"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                     LazyColumn(modifier = Modifier.heightIn(max = 200.dp)) {
                         items(searchResults) { result ->
                             ListItem(
@@ -377,30 +395,34 @@ fun AddChannelDialog(
                         },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Voeg exact toe: $searchQuery")
+                        Text("${viewModel.t("Voeg exact toe", "Add exact")}: $searchQuery")
                     }
                 }
             }
         },
         confirmButton = {},
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Sluiten") }
+            TextButton(onClick = onDismiss) { Text(viewModel.t("Sluiten", "Close")) }
         }
     )
 }
 
 @Composable
-fun AddGroupDialog(onDismiss: () -> Unit, onAdd: (String) -> Unit) {
+fun AddGroupDialog(
+    viewModel: ChannelsViewModel,
+    onDismiss: () -> Unit,
+    onAdd: (String) -> Unit
+) {
     var name by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Nieuwe groep") },
+        title = { Text(viewModel.t("Nieuwe groep", "New Group")) },
         text = {
             TextField(
                 value = name, 
                 onValueChange = { name = it }, 
-                label = { Text("Naam van de groep") },
-                placeholder = { Text("Bijv. Nieuws, Muziek") }
+                label = { Text(viewModel.t("Naam van de groep", "Group Name")) },
+                placeholder = { Text(viewModel.t("Bijv. Nieuws, Muziek", "E.g. News, Music")) }
             )
         },
         confirmButton = {
@@ -409,10 +431,10 @@ fun AddGroupDialog(onDismiss: () -> Unit, onAdd: (String) -> Unit) {
                     onAdd(name)
                     onDismiss()
                 }
-            }) { Text("Toevoegen") }
+            }) { Text(viewModel.t("Toevoegen", "Add")) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Annuleren") }
+            TextButton(onClick = onDismiss) { Text(viewModel.t("Annuleren", "Cancel")) }
         }
     )
 }

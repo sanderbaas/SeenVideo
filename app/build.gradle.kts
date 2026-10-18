@@ -24,8 +24,8 @@ android {
         applicationId = "nl.baasmail.seenvideo"
         minSdk = 26
         targetSdk = 35
-        versionCode = 4
-        versionName = "1.3"
+        versionCode = 5
+        versionName = "1.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -40,7 +40,9 @@ android {
             buildConfigField("String", "GOOGLE_CLIENT_ID", "\"${clientId ?: ""}\"")
         }
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            vcsInfo.include = false
             manifestPlaceholders["appLabel"] = "SeenVideo"
             val clientId = localProperties.getProperty("GOOGLE_CLIENT_ID")
             buildConfigField("String", "GOOGLE_CLIENT_ID", "\"${clientId ?: ""}\"")
@@ -51,13 +53,22 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+    }
+    kotlinOptions {
+        jvmTarget = "11"
     }
 
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    tasks.configureEach {
+        if (name.contains("ArtProfile")) {
+            enabled = false
+        }
     }
 
     packaging {
@@ -66,15 +77,8 @@ android {
         }
     }
 
-    lint {
-        abortOnError = false
-        checkReleaseBuilds = false
-    }
-
-    tasks.configureEach {
-        if (name.contains("lint", ignoreCase = true)) {
-            enabled = false
-        }
+    dependenciesInfo {
+        includeInApk = false
     }
 
     applicationVariants.all {
@@ -83,10 +87,6 @@ android {
             output.outputFileName = "SeenVideo-${versionName}.apk"
         }
     }
-}
-
-kotlin {
-    jvmToolchain(17)
 }
 
 dependencies {
@@ -100,6 +100,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation("androidx.compose.material:material-icons-extended")
     implementation(libs.androidx.activity.compose)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
@@ -126,14 +127,6 @@ dependencies {
 
     // Media3
     implementation(libs.androidx.media3.exoplayer)
-
-    // Google Auth & API
-    implementation(libs.androidx.credentials)
-    implementation(libs.androidx.credentials.play.services.auth)
-    implementation(libs.google.play.services.auth)
-    implementation(libs.googleid)
-    implementation(libs.google.api.client.android)
-    implementation(libs.google.api.services.youtube)
 
     // Coil
     implementation(libs.coil.compose)

@@ -19,14 +19,67 @@ import nl.baasmail.seenvideo.data.repository.YouTubeRepository
 import nl.baasmail.seenvideo.ui.YouTubeLauncher
 import javax.inject.Inject
 
+import nl.baasmail.seenvideo.data.local.BackupManager
 import nl.baasmail.seenvideo.ui.auth.AuthManager
+import nl.baasmail.seenvideo.util.LanguageManager
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val repository: YouTubeRepository,
     private val youtubeLauncher: YouTubeLauncher,
-    private val authManager: AuthManager
+    private val authManager: AuthManager,
+    private val backupManager: BackupManager,
+    private val sharedVideoManager: SharedVideoManager,
+    private val languageManager: LanguageManager
 ) : ViewModel() {
+
+    val currentLanguage = languageManager.currentLanguage
+
+    fun setLanguage(lang: String) {
+        languageManager.setLanguage(lang)
+    }
+
+    fun t(nl: String, en: String): String = languageManager.t(nl, en)
+
+    val backupMessage = MutableStateFlow<String?>(null)
+    val sharedVideoId = sharedVideoManager.sharedVideoId
+
+    fun clearSharedVideo() {
+        sharedVideoManager.clearSharedVideo()
+    }
+
+    fun exportBackupToUri(context: Context, uri: android.net.Uri) {
+        viewModelScope.launch {
+            try {
+                val json = backupManager.createBackupJson()
+                context.contentResolver.openOutputStream(uri)?.use { output ->
+                    output.write(json.toByteArray(Charsets.UTF_8))
+                }
+                backupMessage.value = "Backup succesvol opgeslagen!"
+            } catch (e: Exception) {
+                backupMessage.value = "Fout bij opslaan: ${e.message}"
+            }
+        }
+    }
+
+    fun importBackupFromUri(context: Context, uri: android.net.Uri) {
+        viewModelScope.launch {
+            try {
+                val json = context.contentResolver.openInputStream(uri)?.use { input ->
+                    input.bufferedReader().readText()
+                } ?: ""
+                val result = backupManager.restoreBackupJson(json)
+                backupMessage.value = result
+                refresh()
+            } catch (e: Exception) {
+                backupMessage.value = "Fout bij importeren: ${e.message}"
+            }
+        }
+    }
+
+    fun clearBackupMessage() {
+        backupMessage.value = null
+    }
 
     val userEmail = authManager.userEmail
     val userName = authManager.userName
