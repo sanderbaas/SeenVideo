@@ -1,9 +1,6 @@
 package nl.baasmail.seenvideo.data.remote
 
-import retrofit2.http.Body
-import retrofit2.http.DELETE
 import retrofit2.http.GET
-import retrofit2.http.POST
 import retrofit2.http.Query
 
 interface YouTubeApiService {
@@ -40,58 +37,7 @@ interface YouTubeApiService {
         @Query("pageToken") pageToken: String? = null,
         @Query("key") apiKey: String? = null
     ): YouTubePlaylistResponse
-
-    @POST("youtube/v3/playlistItems")
-    suspend fun insertPlaylistItem(
-        @Query("part") part: String = "snippet",
-        @Body body: PlaylistItemInsertBody
-    ): YouTubePlaylistItem
-
-    @DELETE("youtube/v3/playlistItems")
-    suspend fun deletePlaylistItem(
-        @Query("id") id: String
-    ): retrofit2.Response<Unit>
-
-    @GET("youtube/v3/playlists")
-    suspend fun getMyPlaylists(
-        @Query("part") part: String = "snippet",
-        @Query("mine") mine: Boolean = true,
-        @Query("maxResults") maxResults: Int = 50
-    ): YouTubePlaylistListResponse
-
-    @POST("youtube/v3/playlists")
-    suspend fun createPlaylist(
-        @Query("part") part: String = "snippet",
-        @Body body: PlaylistCreateBody
-    ): YouTubePlaylist
 }
-
-data class YouTubePlaylistListResponse(
-    val items: List<YouTubePlaylist>? = null
-)
-
-data class YouTubePlaylist(
-    val id: String,
-    val snippet: YouTubePlaylistSnippet
-)
-
-data class YouTubePlaylistSnippet(
-    val title: String,
-    val description: String = ""
-)
-
-data class PlaylistItemInsertBody(
-    val snippet: PlaylistItemInsertSnippet
-)
-
-data class PlaylistItemInsertSnippet(
-    val playlistId: String,
-    val resourceId: YouTubeResourceId
-)
-
-data class PlaylistCreateBody(
-    val snippet: YouTubePlaylistSnippet
-)
 
 data class YouTubePlaylistResponse(
     val items: List<YouTubePlaylistItem>? = null,

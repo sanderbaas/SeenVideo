@@ -5,7 +5,7 @@ import androidx.room.RoomDatabase
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 
-@Database(entities = [VideoEntity::class, ChannelEntity::class, ChannelGroupEntity::class], version = 11)
+@Database(entities = [VideoEntity::class, ChannelEntity::class, ChannelGroupEntity::class], version = 11, exportSchema = false)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun videoDao(): VideoDao
     abstract fun channelDao(): ChannelDao

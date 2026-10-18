@@ -25,13 +25,17 @@ import nl.baasmail.seenvideo.notification.NotificationScheduler
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
+import nl.baasmail.seenvideo.util.LanguageManager
 
 @HiltViewModel
 class ChannelsViewModel @Inject constructor(
     private val repository: YouTubeRepository,
     private val notificationPreferences: NotificationPreferences,
+    private val languageManager: LanguageManager,
     @ApplicationContext private val context: Context
 ) : ViewModel() {
+
+    fun t(nl: String, en: String): String = languageManager.t(nl, en)
 
     val notificationsEnabled: StateFlow<Boolean> = notificationPreferences.notificationsEnabled
     val notificationHour: StateFlow<Int> = notificationPreferences.notificationHour

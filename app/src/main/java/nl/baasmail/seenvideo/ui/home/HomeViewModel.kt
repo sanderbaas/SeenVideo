@@ -19,63 +19,85 @@ import nl.baasmail.seenvideo.data.repository.YouTubeRepository
 import nl.baasmail.seenvideo.ui.YouTubeLauncher
 import javax.inject.Inject
 
-import nl.baasmail.seenvideo.ui.auth.AuthManager
+import nl.baasmail.seenvideo.data.local.ApiPreferences
+import nl.baasmail.seenvideo.data.local.BackupManager
+import nl.baasmail.seenvideo.data.local.NotificationPreferences
+import nl.baasmail.seenvideo.util.LanguageManager
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val repository: YouTubeRepository,
     private val youtubeLauncher: YouTubeLauncher,
-    private val authManager: AuthManager
+    private val backupManager: BackupManager,
+    private val sharedVideoManager: SharedVideoManager,
+    private val languageManager: LanguageManager,
+    private val notificationPreferences: NotificationPreferences,
+    private val apiPreferences: ApiPreferences
 ) : ViewModel() {
 
-    val userEmail = authManager.userEmail
-    val userName = authManager.userName
-    val userPhoto = authManager.userPhoto
-    val accessToken = authManager.accessToken
-    val isFetchingToken = authManager.isFetchingToken
+    val currentLanguage = languageManager.currentLanguage
 
-    fun autoSignIn(context: Context) {
-        if (authManager.userEmail.value != null) {
-            // Reeds een opgeslagen sessie, haal token op en synchroniseer
-            viewModelScope.launch {
-                authManager.getYouTubeToken(context)
-                repository.syncLocalWatchedToYouTube()
+    val notificationsEnabled: StateFlow<Boolean> = notificationPreferences.notificationsEnabled
+    val notificationHour: StateFlow<Int> = notificationPreferences.notificationHour
+    val notificationMinute: StateFlow<Int> = notificationPreferences.notificationMinute
+    val apiKey: StateFlow<String> = apiPreferences.apiKey
+
+    fun setNotificationsEnabled(enabled: Boolean) {
+        notificationPreferences.setNotificationsEnabled(enabled)
+    }
+
+    fun setNotificationTime(hour: Int, minute: Int) {
+        notificationPreferences.setNotificationTime(hour, minute)
+    }
+
+    fun setApiKey(key: String) {
+        apiPreferences.setApiKey(key)
+    }
+
+    fun setLanguage(lang: String) {
+        languageManager.setLanguage(lang)
+    }
+
+    fun t(nl: String, en: String): String = languageManager.t(nl, en)
+
+    val backupMessage = MutableStateFlow<String?>(null)
+    val sharedVideoId = sharedVideoManager.sharedVideoId
+
+    fun clearSharedVideo() {
+        sharedVideoManager.clearSharedVideo()
+    }
+
+    fun exportBackupToUri(context: Context, uri: android.net.Uri) {
+        viewModelScope.launch {
+            try {
+                val json = backupManager.createBackupJson()
+                context.contentResolver.openOutputStream(uri)?.use { output ->
+                    output.write(json.toByteArray(Charsets.UTF_8))
+                }
+                backupMessage.value = "Backup succesvol opgeslagen!"
+            } catch (e: Exception) {
+                backupMessage.value = "Fout bij opslaan: ${e.message}"
+            }
+        }
+    }
+
+    fun importBackupFromUri(context: Context, uri: android.net.Uri) {
+        viewModelScope.launch {
+            try {
+                val json = context.contentResolver.openInputStream(uri)?.use { input ->
+                    input.bufferedReader().readText()
+                } ?: ""
+                val result = backupManager.restoreBackupJson(json)
+                backupMessage.value = result
                 refresh()
-            }
-            return
-        }
-        
-        viewModelScope.launch {
-            val result = authManager.autoSignIn(context)
-            if (result == "Success") {
-                authManager.getYouTubeToken(context)
-                repository.syncLocalWatchedToYouTube()
-            }
-            refresh() // Haal vinkjes en videos op
-        }
-    }
-
-    fun signIn(context: Context) {
-        viewModelScope.launch {
-            val result = authManager.signIn(context)
-            if (result == "Success") {
-                authManager.getYouTubeToken(context)
-                repository.syncLocalWatchedToYouTube()
-                refresh() // Haal vinkjes en videos op
+            } catch (e: Exception) {
+                backupMessage.value = "Fout bij importeren: ${e.message}"
             }
         }
     }
 
-    fun fetchYouTubeToken(context: Context) {
-        viewModelScope.launch {
-            authManager.getYouTubeToken(context)
-        }
-    }
-
-    fun signOut() {
-        viewModelScope.launch {
-            authManager.signOut()
-        }
+    fun clearBackupMessage() {
+        backupMessage.value = null
     }
 
     private val _isRefreshing = MutableStateFlow(false)
@@ -160,10 +182,6 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             _isRefreshing.value = true
             try {
-                // Forceer een nieuw token bij een handmatige refresh om zeker te zijn van actuele data
-                val context = authManager.getContext() 
-                authManager.getYouTubeToken(context, forceRefresh = false) // Probeer eerst normaal
-                
                 val currentId = _selectedChannelId.value
                 if (currentId == null) {
                     val currentGroupId = _selectedGroupId.value

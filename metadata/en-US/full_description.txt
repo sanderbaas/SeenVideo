@@ -1,0 +1,22 @@
+SeenVideo gives you a focused way to follow YouTube channels and keep track of the videos you want to watch—without signing in or adding another feed full of distractions.
+
+Add channels by searching or entering a handle, such as @VPROTegenlicht. Your home feed shows new videos only from channels you choose, and custom groups help you organize them your way.
+
+Make your feed your own
+- Follow specific YouTube channels by handle or with built-in search.
+- Organize channels into custom groups such as News or Entertainment.
+- Filter your home feed instantly with interactive group pills.
+- Filter out YouTube Shorts for a more long-form viewing experience.
+
+Keep track of videos locally
+- Add videos to your local Watch Later queue.
+- Mark videos as watched and manage their status on your device.
+- Share videos from the YouTube app to SeenVideo to queue them for later or mark them as watched.
+
+Stay focused
+- Blur titles and thumbnails for selected channels; tap to reveal them.
+- Highlight or filter keywords in video titles.
+- Choose a daily notification time for one bundled summary of new videos.
+- Turn notifications on or off for individual channels.
+
+SeenVideo features a clean Material 3 interface with Dark Mode support. It’s local-first: no account login or cloud sync is required, and your data stays on your device.
