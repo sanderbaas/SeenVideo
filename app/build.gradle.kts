@@ -11,8 +11,7 @@ plugins {
 
 android {
     namespace = "nl.baasmail.seenvideo"
-    compileSdk = 35
-    buildToolsVersion = "35.0.0"
+    compileSdk = 36
 
     val localProperties = Properties()
     val localPropertiesFile = rootProject.file("local.properties")
@@ -23,7 +22,7 @@ android {
     defaultConfig {
         applicationId = "nl.baasmail.seenvideo"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 5
         versionName = "1.4"
 
@@ -63,12 +62,6 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
-    }
-
-    tasks.configureEach {
-        if (name.contains("ArtProfile")) {
-            enabled = false
-        }
     }
 
     packaging {
